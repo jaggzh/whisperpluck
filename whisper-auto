@@ -1,0 +1,24 @@
+#!/bin/bash
+dd=~/Desktop
+stat_ready='WH-?'
+stat_done='WH-Done'
+stat_rec='WH-Rec'
+stat_wh='WH-Whispering'
+
+ourdir="$(dirname "$(readlink -f "$0")")"
+if ! which python | grep venv.whisper >/dev/null; then
+	echo "Not in whisper venv. Activating now..."
+	. ~/venv/whisper/bin/activate
+fi
+
+cd "$ourdir" || { echo "Error"; exit 1; }
+wav="new.wav"
+output="new.txt"
+mv "$wav" "$wav.prior"
+mv "$output" "$output.prior"
+mv $dd/WH-* $dd/"$stat_rec"
+rec "$wav"
+mv $dd/WH-* $dd/"$stat_wh"
+whisper --model small --task transcribe --language en "$wav" &>whisper.log
+mv $dd/WH-* $dd/"$stat_done"
+cat new.txt | xsel -i -b
