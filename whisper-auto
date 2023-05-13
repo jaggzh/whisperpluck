@@ -1,13 +1,46 @@
 #!/bin/bash
 
-# Paths
+# use_server: If you're running our whisper server
+#             (ie. cd server-flask && flask run)
+#             Set to 0 to disable, and we'll run whisper directly
+use_server=1
+# use_server=0
+server_port=5000
+
+# envact: Script to activate environment.
+#         THIS IS NOT USED IF YOU'RE USING THE SERVER, BECAUSE
+#         WE AREN'T USING PYTHON FROM THIS SCRIPT UNLESS WE'RE
+#         RUNNING WHISPER DIRECTLY.
+#         This means, if you have use_server=1 above, you can
+#         ignore these lines.
+envact=~/venv/whisper/bin/activate
+# envpattern: Regex used to test the python path so we don't have
+#             to re-init the env if we're in it
+#     if ! which python3 | grep "$envpattern" >/dev/null; then
+envpattern=venv/whisper
+
+
+# You can pick a different record command for your system.
+# Note: Whisper will convert anything you give it to
+#   its needed   16000 Hz, s16le, mono
+record_command () { arecord -f S16_LE -r 16000 "$1"; }
+# sox's 'rec' has a strange delay on my system
+# record_command () { rec "$1"; }
+
+
+################################################################
+################################################################
+# Unless you're developing, you probably don't need to
+# change anything below
+
 # dd: desktop dir: used for icons we rename for status
 #     (and usually to run these scripts)
 dd=~/Desktop
-envact=~/venv/whisper/bin/activate
+
 bin_wauto=whisper-auto
 bin_wkill=whisper-kill-rec
 
+cachedir=cache
 
 stat_done='WH-Done'
 stat_rec='WH-Rec'
@@ -17,33 +50,48 @@ kill_name="End Rec"
 # Initital renaming
 ls -l "$dd/$bin_wauto"*
 [[ -f $dd/$bin_wauto ]] && {
-	echo wut
 	mv "$dd/$bin_wauto" "$dd/$stat_done"
 }
 [[ -f $dd/$bin_wauto ]] &&
 	mv "$dd/$bin_wauto" "$dd/$stat_done"
 [[ -f $dd/$bin_wkill ]] &&
 	mv "$dd/$bin_wkill" "$dd/$kill_name"
-exit
 
 ourdir="$(dirname "$(readlink -f "$0")")"
-if ! which python | grep venv.whisper >/dev/null; then
-	echo "Not in whisper venv. Activating now..."
-	. "$envact"
-	[[ $? > 0 ]] && {
-		echo "Couldn't activate env:\n$envact";
-		exit;
-	}
+if [[ $use_server = 0 ]]; then
+	if ! which python3 | grep "$envpattern" >/dev/null; then
+		echo "Not in whisper venv. Activating now..."
+		. "$envact"
+		[[ $? > 0 ]] && {
+			echo "Couldn't activate env:\n$envact";
+			exit;
+		}
+	fi
 fi
 
 cd "$ourdir" || { echo "Error"; exit 1; }
-wav="new.wav"
-output="new.txt"
-mv "$wav" "$wav.prior"
-mv "$output" "$output.prior"
-mv $dd/WH-* $dd/"$stat_rec"
-rec "$wav"
-mv $dd/WH-* $dd/"$stat_wh"
-whisper --model small --task transcribe --language en "$wav" &>whisper.log
-mv $dd/WH-* $dd/"$stat_done"
-cat new.txt | xsel -i -b
+[[ -d $cachedir ]] || mkdir -p $cachedir ||
+	{ echo "Error"; exit 1; }
+wav="$cachedir/new.wav"
+wavprior="$cachedir/new-prior.wav"
+output="$cachedir/new.txt"
+outputprior="$cachedir/new-prior.txt"
+json="$cachedir/new.json"
+log="$cachedir/whisper.log"
+[[ -a $wav ]] && mv "$wav" "$wavprior"
+[[ -a $wav ]] && mv "$output" "$outputprior"
+mv $dd/WH-* $dd/"$stat_rec" &>/dev/null
+record_command "$wav"
+mv $dd/WH-* $dd/"$stat_wh" &>/dev/null
+
+if [[ $use_server = 0 ]]; then
+	whisper --model small --task transcribe --language en "$wav" &>"$log"
+else
+	jsonstr=$(curl -s -F file=@"$wav" localhost:5000)
+	printf 'JSON output:\n%s\n' "$jsonstr"
+	echo "Storing in file $json"
+	printf '%s\n' "$jsonstr" > "$json"
+fi
+
+mv "$dd/WH-"* "$dd/$stat_done" &>/dev/null
+cat "$output" | xsel -i -b
