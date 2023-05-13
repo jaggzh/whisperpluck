@@ -13,6 +13,21 @@ const char stat_rdy[]="Ready";
 const char stat_rec[]="REC";
 const char stat_whi[]="Whisper";
 
+char style_rdy_button[] =
+			"#button_status { "
+				"background: rgba(48, 159, 16, 0.8); "
+				"border-radius: 10px; "
+				"border: none;"
+				"padding-top: .3em; "
+				"padding-bottom: .3em; "
+			"}";
+char style_rdy_label[] =
+			"#label_status { "
+				"font-weight: bold; "
+				"font-size: 13px; "
+				"color: white; "
+			"}";
+
 static void on_button_clicked(GtkWidget *widget, gpointer data) {
     g_print("Button clicked: %s\n", (char *)data);
 }
@@ -22,27 +37,6 @@ static gboolean on_button_press(GtkWidget* widget, GdkEventButton* event, GtkWin
         start_x = event->x_root;
         start_y = event->y_root;
         g_print("Button press at coordinates: (%f, %f)\n", event->x, event->y);
-    }
-    return FALSE; // propagate event?
-}
-static gboolean on_button_release(GtkWidget* widget, GdkEventButton* event, GtkWindow* window) {
-    g_print("Button release at coordinates: (%f, %f)\n", event->x, event->y);
-    gint x, y;
-    gtk_window_get_position(window, &x, &y);
-    FILE *f = fopen(fn_pos, "w");
-    if (f == NULL) { g_print("Error opening file!\n"); return FALSE; }
-    fprintf(f, "%d %d\n", x, y);
-    fclose(f);
-    return FALSE; // propagate event?
-}
-static gboolean on_motion_notify(GtkWidget* widget, GdkEventMotion* event, GtkWindow* window) {
-    if (verbose>1) g_print("Motion notification\n");
-    if (event->state & GDK_BUTTON1_MASK) { // LMB
-        gint x, y;
-        gtk_window_get_position(window, &x, &y);
-        gtk_window_move(window, x + event->x_root - start_x, y + event->y_root - start_y);
-        start_x = event->x_root;
-        start_y = event->y_root;
     }
     return FALSE; // propagate event?
 }
@@ -59,6 +53,27 @@ void setup_pid_file() {
 		perror("Error opening PID file");
 		exit(EXIT_FAILURE);
 	}
+}
+static gboolean on_motion_notify(GtkWidget* widget, GdkEventMotion* event, GtkWindow* window) {
+    if (verbose>1) g_print("Motion notification\n");
+    if (event->state & GDK_BUTTON1_MASK) { // LMB
+        gint x, y;
+        gtk_window_get_position(window, &x, &y);
+        gtk_window_move(window, x + event->x_root - start_x, y + event->y_root - start_y);
+        start_x = event->x_root;
+        start_y = event->y_root;
+    }
+    return FALSE; // propagate event?
+}
+static gboolean on_button_release(GtkWidget* widget, GdkEventButton* event, GtkWindow* window) {
+    g_print("Button release at coordinates: (%f, %f)\n", event->x, event->y);
+    gint x, y;
+    gtk_window_get_position(window, &x, &y);
+    FILE *f = fopen(fn_pos, "w");
+    if (f == NULL) { g_print("Error opening file!\n"); return FALSE; }
+    fprintf(f, "%d %d\n", x, y);
+    fclose(f);
+    return FALSE; // propagate event?
 }
 void set_window_position_from_file(GtkWindow* window, const char* filename) {
     FILE* f = fopen(filename, "r");
@@ -83,23 +98,29 @@ void set_widget_child_style(GtkWidget *parent, gchar *style) {
 	GtkWidget *widget = gtk_bin_get_child(GTK_BIN(parent));
 	if (widget) set_widget_style(widget, style);
 }
+void set_label_status(const char txt[],
+		char *style_button,
+		char *style_label) {
+	gtk_button_set_label(GTK_BUTTON(button_status), txt);
+	// set label makes a new label widget!!!
+	label_status = gtk_bin_get_child(GTK_BIN(button_status));
+	gtk_widget_set_name(label_status, "label_status");
+	set_widget_style(button_status, style_button);
+	set_widget_style(label_status,  style_label);
+}
 static void handle_signals(int sig) {
     g_print("Received signal %d\n", sig);
     switch (sig) {
         case SIGUSR1:
-			gtk_button_set_label(
-					GTK_BUTTON(button_status), stat_rec);
-			label_status = gtk_bin_get_child(
-					GTK_BIN(button_status));
-			gtk_widget_set_name(label_status, "label_status");
-            set_widget_style(button_status, 
+        	set_label_status(stat_rec,
 				"#button_status { "
 					"font-size: 10px; "
 					"background: rgba(255, 255, 0, 0.8); "
 					"border-radius: 10px; "
 					"border: 2px solid red; "
-				"}");
-            set_widget_style(label_status, 
+					"padding-top: .3em; "
+					"padding-bottom: .3em; "
+				"}",
 				"#label_status { "
 					"font-weight: bold; "
 					"font-size: 14px; "
@@ -107,22 +128,25 @@ static void handle_signals(int sig) {
 				"}");
             break;
         case SIGUSR2:
-			gtk_button_set_label(GTK_BUTTON(button_status), "REC");
-			label_status = gtk_bin_get_child(GTK_BIN(button_status));
-			gtk_widget_set_name(label_status, "label_status");
-            set_widget_style(button_status, 
+        	set_label_status(stat_whi,
 				"#button_status { "
 					"font-size: 10px; "
 					"background: rgba(255, 255, 0, 0.8); "
 					"border-radius: 10px; "
-					"border: 2px solid red; "
-				"}");
-            set_widget_style(label_status, 
+					"border: none;"
+					"padding-top: .3em; "
+					"padding-bottom: .3em; "
+				"}",
 				"#label_status { "
 					"font-weight: bold; "
 					"font-size: 14px; "
 					"color: black; "
 				"}");
+            break;
+        case SIGHUP:
+        	set_label_status(stat_rdy,
+        		style_rdy_button,
+        		style_rdy_label);
             break;
     }
 }
@@ -177,15 +201,15 @@ int main(int argc, char *argv[]) {
 	// Apply CSS
     GtkCssProvider *provider = gtk_css_provider_new();
 	gtk_css_provider_load_from_data(provider,
-		"#button_status, #button_status:hover, #button_status:active, #button_status:focus { "
-			"font-size: 13px; "
-			"background: rgba(48, 159, 16, 0.8); "
-			"border-radius: 10px; "
-		"} "
-		"#label_status { "
-			"color: white; "
-			"font-weight: bold; "
-		"} "
+		/* "#button_status, #button_status:hover, #button_status:active, #button_status:focus { " */
+		/* 	"font-size: 13px; " */
+		/* 	"background: rgba(48, 159, 16, 0.8); " */
+		/* 	"border-radius: 10px; " */
+		/* "} " */
+		/* "#label_status { " */
+		/* 	"color: white; " */
+		/* 	"font-weight: bold; " */
+		/* "} " */
 		"#button_close { "
 			"font-size: 17px; "
 			"font-weight: bold; "
@@ -202,6 +226,9 @@ int main(int argc, char *argv[]) {
     	gdk_screen_get_default(),
 		GTK_STYLE_PROVIDER(provider),
 		GTK_STYLE_PROVIDER_PRIORITY_USER);
+	set_label_status(stat_rdy,
+		style_rdy_button,
+		style_rdy_label);
 
 	// OTHER BUTTONS
 
@@ -219,6 +246,7 @@ int main(int argc, char *argv[]) {
 	setup_pid_file();
     signal(SIGUSR1, handle_signals);
     signal(SIGUSR2, handle_signals);
+    signal(SIGHUP, handle_signals);
 
     gtk_main();
 
