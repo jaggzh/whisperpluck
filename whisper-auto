@@ -1,14 +1,39 @@
 #!/bin/bash
+
+# Paths
+# dd: desktop dir: used for icons we rename for status
+#     (and usually to run these scripts)
 dd=~/Desktop
-stat_ready='WH-?'
+envact=~/venv/whisper/bin/activate
+bin_wauto=whisper-auto
+bin_wkill=whisper-kill-rec
+
+
 stat_done='WH-Done'
 stat_rec='WH-Rec'
 stat_wh='WH-Whispering'
+kill_name="End Rec"
+
+# Initital renaming
+ls -l "$dd/$bin_wauto"*
+[[ -f $dd/$bin_wauto ]] && {
+	echo wut
+	mv "$dd/$bin_wauto" "$dd/$stat_done"
+}
+[[ -f $dd/$bin_wauto ]] &&
+	mv "$dd/$bin_wauto" "$dd/$stat_done"
+[[ -f $dd/$bin_wkill ]] &&
+	mv "$dd/$bin_wkill" "$dd/$kill_name"
+exit
 
 ourdir="$(dirname "$(readlink -f "$0")")"
 if ! which python | grep venv.whisper >/dev/null; then
 	echo "Not in whisper venv. Activating now..."
-	. ~/venv/whisper/bin/activate
+	. "$envact"
+	[[ $? > 0 ]] && {
+		echo "Couldn't activate env:\n$envact";
+		exit;
+	}
 fi
 
 cd "$ourdir" || { echo "Error"; exit 1; }
