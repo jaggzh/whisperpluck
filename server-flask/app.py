@@ -16,6 +16,7 @@ def handler():
 
     # For each file, let's store the results in a list of dictionaries.
     results = []
+    strings = []
 
     # Loop over every file that the user submitted.
     for filename, handle in request.files.items():
@@ -33,6 +34,10 @@ def handler():
             'filename': filename,
             'transcript': result['text'],
         })
+        strings.append(result['text'])
 
     # This will be automatically converted to JSON.
-    return {'results': results}
+    #return {'results': results}
+    return '. '.join(strings)
+
+# set noet ts=4

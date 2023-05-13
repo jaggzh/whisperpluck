@@ -10,7 +10,8 @@ This was initially designed for the desktop icons. It updates/renames the icons 
 
 Note that this also means the hotkeys method of usage will still b trying to access the desktop icons, and I've not tested that.
 
-`whisper-auto`
+# Requirements
+* jq: Needed if using the server (to parse the json response)
 
 # Usage:
     ```
