@@ -4,21 +4,23 @@ Some scripts for convenient voice transcription
 
 Usable with hotkeys or desktop icons, for now.
 
+## Please consider contributing...
+
+* [Donate to patreon.com/jaggz](https://patreon.com/jaggz)
+* Or paypal me at jaggz.h {at} gmail.com
+
 ## **IMPORTANT**
 
 This was initially designed for the desktop icons. It updates/renames the icons to give status (like WH-Ready -> WH-Rec), but this is not updating [the desktop icons] in KDE Plasma, and that's something I'm working on now.
 
 Note that this also means the hotkeys method of usage will still b trying to access the desktop icons, and I've not tested that.
 
-# Requirements
-* jq: Needed if using the server (to parse the json response)
+# USAGE METHODS
 
-# USAGE METHODS (server mode or running whisper each transcription)
+We have two methods of using whisper for our purposes:
 
-We have two methods:
-
-1. Run whisper each time you want a transcription (model must be loaded each run)
-2. Run a separate little server (in server-flask/) which keeps the model loaded so transcriptions are faster
+1. *No-Server Method:* Runs whisper each time you want a transcription (model must be loaded each run)
+2. *Server Method*: Run a separate little server (in `server-flask/`) which keeps the model loaded so transcriptions are faster
 
 ## Both methods require a venv, which right now is `whisper`
 
