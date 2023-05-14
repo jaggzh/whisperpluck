@@ -7,7 +7,7 @@ whisper-buttons-run: whisper-buttons
 	./whisper-buttons
 	# GTK_DEBUG=interactive ./whisper-buttons
 
-whisper-buttons: main-buttons.c
+whisper-buttons: main-buttons.c utils.c utils.h
 	gcc \
 		-o "$@" \
 		$^ \
@@ -18,5 +18,6 @@ vi:
 	vi \
 		Makefile \
 		main-buttons.c \
+		utils.c utils.h \
 		"$(output_log)" \
 		new.c 

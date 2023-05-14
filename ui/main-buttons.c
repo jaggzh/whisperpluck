@@ -1,17 +1,23 @@
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <sys/stat.h>
+#include "utils.h"
 
 static gint start_x = 0;
 static gint start_y = 0;
 int verbose=0;
-const char fn_pid[]="/tmp/whisper-auto.pid";
-const char fn_pos[]="/tmp/whisper-auto-pos.txt";
-GtkWidget *button_status, *label_status;
+const char fn_pid[]="/tmp/whisper-auto-ui.pid";
+const char fn_pos[]="/tmp/whisper-auto-ui-pos.txt";
+GtkWidget *btn_status, *label_status;
+GtkWidget *btn_close, *btn_start, *btn_stop;
+char *error_status=NULL;
 
 const char stat_rdy[]="Ready";
 const char stat_rec[]="REC";
 const char stat_whi[]="Whisper";
+
+char *path_bin_start="whisper-auto";
+char *path_bin_stop="whisper-kill-rec";
 
 char style_rdy_button[] =
 			"#button_status { "
@@ -28,8 +34,49 @@ char style_rdy_label[] =
 				"color: white; "
 			"}";
 
+void child_watch_cb(GPid pid, gint status, gpointer user_data) {
+    // This function is called when the child process terminates
+    g_print("Child process ended with status %d\n", status);
+    g_spawn_close_pid(pid);  // Close the handle to the child process
+}
+
+void exec_script(char *cmd) {
+    GError *error = NULL;
+    GPid child_pid;
+    char *path;
+    char *argv[] = {cmd, NULL};
+    if (!g_spawn_async(NULL,
+                       argv,
+                       NULL,
+                       G_SPAWN_DO_NOT_REAP_CHILD,
+                       NULL,
+                       NULL,
+                       &child_pid,
+                       &error)) {
+        g_print("Error starting script: %s\n", error->message);
+        g_error_free(error);
+    } else {
+        // Add a watch function for the child process
+        g_child_watch_add(child_pid, child_watch_cb, NULL);
+    }
+}
+void exec_start() { exec_script(path_bin_start); }
+void exec_stop() { exec_script(path_bin_stop); }
+
 static void on_button_clicked(GtkWidget *widget, gpointer data) {
-    g_print("Button clicked: %s\n", (char *)data);
+    if (widget == btn_start) {
+		g_print("  START Button clicked: %s\n", (char *)data);
+		exec_start();
+	} else if (widget == btn_stop) {
+		g_print("  STOP Button clicked: %s\n", (char *)data);
+		exec_stop();
+	} else if (widget == btn_close) {
+		g_print("  CLOSE Button clicked: %s\n", (char *)data);
+		unlink(fn_pid);
+		gtk_main_quit();
+	} else {
+		g_print("  Other Button clicked: %s\n", (char *)data);
+	}
 }
 static gboolean on_button_press(GtkWidget* widget, GdkEventButton* event, GtkWindow* window) {
     g_print("Button press\n");
@@ -101,11 +148,11 @@ void set_widget_child_style(GtkWidget *parent, gchar *style) {
 void set_label_status(const char txt[],
 		char *style_button,
 		char *style_label) {
-	gtk_button_set_label(GTK_BUTTON(button_status), txt);
+	gtk_button_set_label(GTK_BUTTON(btn_status), txt);
 	// set label makes a new label widget!!!
-	label_status = gtk_bin_get_child(GTK_BIN(button_status));
+	label_status = gtk_bin_get_child(GTK_BIN(btn_status));
 	gtk_widget_set_name(label_status, "label_status");
-	set_widget_style(button_status, style_button);
+	set_widget_style(btn_status, style_button);
 	set_widget_style(label_status,  style_label);
 }
 static void handle_signals(int sig) {
@@ -151,6 +198,28 @@ static void handle_signals(int sig) {
     }
 }
 
+void setup() {
+	char *new_path;
+	if (*path_bin_stop != '/') {
+		new_path = locate_script(path_bin_stop);
+		if (!new_path) {
+			error_status = "No Stop Script!";
+			g_print("Error locating script in path: %s\n", path_bin_stop);
+		} else {
+			path_bin_stop = new_path;
+		}
+	}
+	if (*path_bin_start != '/') {
+		new_path = locate_script(path_bin_start);
+		if (!new_path) {
+			error_status = "No Start Script!";
+			g_print("Error locating script in path: %s\n", path_bin_start);
+		} else {
+			path_bin_start = new_path;
+		}
+	}
+}
+
 int main(int argc, char *argv[]) {
 	for (int i=0; i<argc; i++) {
 		if (!strcmp(argv[i], "-v")) verbose++;
@@ -159,8 +228,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
     GtkWidget *window, *vbox, *hbox;
-	GtkWidget *button_close, *button1, *button2;
     gtk_init(&argc, &argv);
+	setup();
 
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     set_window_position_from_file(GTK_WINDOW(window), fn_pos);
@@ -180,23 +249,23 @@ int main(int argc, char *argv[]) {
     hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
 
-	button_status = gtk_button_new_with_label(stat_rdy);
-	gtk_widget_set_name(button_status, "button_status");
-	label_status = gtk_bin_get_child(GTK_BIN(button_status));
+	btn_status = gtk_button_new_with_label(stat_rdy);
+	gtk_widget_set_name(btn_status, "button_status");
+	label_status = gtk_bin_get_child(GTK_BIN(btn_status));
 	gtk_widget_set_name(label_status, "label_status");
 
-	gtk_widget_set_events(button_status, GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK);
-	g_signal_connect(button_status, "button-press-event", G_CALLBACK(on_button_press), window);
-	g_signal_connect(button_status, "motion-notify-event", G_CALLBACK(on_motion_notify), window);
-	g_signal_connect(button_status, "button-release-event", G_CALLBACK(on_button_release), window);
-	gtk_box_pack_start(GTK_BOX(hbox), button_status, TRUE, TRUE, 0);
+	gtk_widget_set_events(btn_status, GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK);
+	g_signal_connect(btn_status, "button-press-event", G_CALLBACK(on_button_press), window);
+	g_signal_connect(btn_status, "motion-notify-event", G_CALLBACK(on_motion_notify), window);
+	g_signal_connect(btn_status, "button-release-event", G_CALLBACK(on_button_release), window);
+	gtk_box_pack_start(GTK_BOX(hbox), btn_status, TRUE, TRUE, 0);
 	// Disable click events on status
-	g_signal_handlers_block_by_func(button_status, on_button_clicked, "Status");
+	g_signal_handlers_block_by_func(btn_status, on_button_clicked, "Status");
 
-	button_close = gtk_button_new_with_label("☒");
-	gtk_widget_set_name(button_close, "button_close");
-    g_signal_connect(button_close, "clicked", G_CALLBACK(gtk_main_quit), NULL);
-    gtk_box_pack_start(GTK_BOX(hbox), button_close, TRUE, TRUE, 0);
+	btn_close = gtk_button_new_with_label("☒");
+	gtk_widget_set_name(btn_close, "button_close");
+    g_signal_connect(btn_close, "clicked", G_CALLBACK(on_button_clicked), "Close");
+    gtk_box_pack_start(GTK_BOX(hbox), btn_close, TRUE, TRUE, 0);
 
 	// Apply CSS
     GtkCssProvider *provider = gtk_css_provider_new();
@@ -226,19 +295,25 @@ int main(int argc, char *argv[]) {
     	gdk_screen_get_default(),
 		GTK_STYLE_PROVIDER(provider),
 		GTK_STYLE_PROVIDER_PRIORITY_USER);
-	set_label_status(stat_rdy,
-		style_rdy_button,
-		style_rdy_label);
+	if (error_status) {
+		set_label_status(error_status,
+			style_rdy_button,
+			style_rdy_label);
+	} else {
+		set_label_status(stat_rdy,
+			style_rdy_button,
+			style_rdy_label);
+	}
 
 	// OTHER BUTTONS
 
-    button1 = gtk_button_new_with_label("Record");
-    g_signal_connect(button1, "clicked", G_CALLBACK(on_button_clicked), "Record");
-    gtk_box_pack_start(GTK_BOX(vbox), button1, TRUE, TRUE, 0);
+    btn_start = gtk_button_new_with_label("Record");
+    g_signal_connect(btn_start, "clicked", G_CALLBACK(on_button_clicked), "Record");
+    gtk_box_pack_start(GTK_BOX(vbox), btn_start, TRUE, TRUE, 0);
 
-    button2 = gtk_button_new_with_label("Stop");
-    g_signal_connect(button2, "clicked", G_CALLBACK(on_button_clicked), "Stop");
-    gtk_box_pack_start(GTK_BOX(vbox), button2, TRUE, TRUE, 0);
+    btn_stop = gtk_button_new_with_label("Stop");
+    g_signal_connect(btn_stop, "clicked", G_CALLBACK(on_button_clicked), "Stop");
+    gtk_box_pack_start(GTK_BOX(vbox), btn_stop, TRUE, TRUE, 0);
 
     gtk_widget_show_all(window);
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);

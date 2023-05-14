@@ -5,7 +5,6 @@ vi:
 	vim \
 		README.md \
 		Makefile \
-		settings.sh \
 		whisper-auto \
 		whisper-kill-rec \
 		server-flask/app.py

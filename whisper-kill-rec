@@ -1,2 +1,6 @@
 #!/bin/bash
-pkill '^rec$'
+# fn_rec_pid: Internal use. Make sure it matches the same variable
+#             found in whisper-auto
+fn_rec_pid=/tmp/whisper-auto-rec.pid
+kill "$(<$fn_rec_pid)"
+#pkill '^rec$'

@@ -1,4 +1,7 @@
 #!/bin/bash
+# jaggz.h {who is at} gmail.com
+ourdir="$(dirname "$(readlink -f "$0")")"
+. "$ourdir/ansi.sh" # Get some colors in here
 
 # use_server: If you're running our whisper server
 #             (ie. cd server-flask && flask run)
@@ -40,8 +43,11 @@ server_port=5000
 # You can pick a different record command for your system.
 # Note: Whisper will convert anything you give it to
 #   its needed   16000 Hz, s16le, mono
-record_command () { arecord -f S16_LE -r 16000 "$1"; }
+
+cmd_record () { arecord -f S16_LE -r 16000 "$1"; }
+
 # sox's 'rec' has a strange delay on my system
+# This would need to be updated to match the arecord method above
 # record_command () { rec "$1"; }
 
 
@@ -65,19 +71,55 @@ stat_rec='WH-Rec'
 stat_wh='WH-Whispering'
 kill_name="End Rec"
 
+# fn_rec_pid: Internal use. Our record command's PID to be killed
+#             by whisper-kill-rec. If you change this, change it
+#             in whisper-kill-rec too.
+fn_rec_pid=/tmp/whisper-auto-rec.pid  # No need to touch, probably.
+fn_ui_pid=/tmp/whisper-auto-ui.pid # Must match ui source file!
+
+[[ -e $fn_ui_pid ]] && {
+	echo " ${yele}Found UI PID File$rste"
+}
+_set_status_ui_sig () { [[ -e $fn_ui_pid ]] && kill "$1" $(<$fn_ui_pid); }
+set_status_ui_rec () { _set_status_ui_sig -USR1; }
+set_status_ui_whi () { _set_status_ui_sig -USR2; }
+set_status_ui_rdy () { _set_status_ui_sig -HUP; }
+
+record_audio () {
+	local rec_pid
+	cmd_record "$1" &
+	rec_pid=$!
+	echo "$rec_pid" > "$fn_rec_pid"
+	sleep .2
+	echo
+	echo "	${bgree}-- RECORDING. Hit CTRL-C to Finish --$rste"
+
+	handle_sigint() {
+		# echo "Caught SIGINT; terminating recording."
+		kill -TERM "$rec_pid"
+	}
+	trap handle_sigint SIGINT  # Catch INT
+	wait "$rec_pid"
+	rm "$fn_rec_pid" # Clean up tmp pid file
+	echo "Continuing to process audio..."
+	trap - SIGINT              # reset the trap
+}
+
 # Initital renaming
 rename_first_match () {
 	local src_base="$1"
 	local target="$2"
 	local files=("$1"*)
-	[[ -e "${files[0]}" ]] && mv "${files[0]}" "$target"
+	if [[ -e "${files[0]}" ]]; then
+		if [[ "${files[0]}" != "$target" ]]; then
+			mv "${files[0]}" "$target"
+		fi
+	fi
 }
 # ls -l "$dd/$bin_wauto"*
 rename_first_match "$dd/$bin_wauto" "$dd/$stat_done"
 rename_first_match "$dd/$bin_wkill" "$dd/$kill_name"
 
-ourdir="$(dirname "$(readlink -f "$0")")"
-. ./ansi.sh
 if [[ $use_server = 0 ]]; then
 	if ! which python3 | grep "$envpattern" >/dev/null; then
 		echo "Not in whisper venv. Activating now..."
@@ -100,18 +142,23 @@ log="$cachedir/whisper.log"
 [[ -a $wav ]] && mv "$wav" "$wavprior"
 [[ -a $output ]] && mv "$output" "$outputprior"
 
-set_status () {
+set_status_icons () {
 	str="$1"
 	files=($dd/WH-*)
 	[[ -e ${files[0]} ]] && mv "${files[0]}" $dd/"$str"
 }
-set_status "$stat_rec"
-record_command "$wav"
-set_status "$stat_wh"
+set_status_icons "$stat_rec"
+set_status_ui_rec
+record_audio "$wav"
+set_status_icons "$stat_wh"
+set_status_ui_whi
 
 copy_output_to_clipboard () {
-	cat "$output" | sed -e 's/^/   /; s/$/  	/;' | tr '\r\n' ' ' |
-		awk '{$1=$1};1' | tr -d '\r\n' |  xsel -i -b
+	str=$(cat "$output" | sed -e 's/^/   /; s/$/  	/;' | tr '\r\n' ' ' |
+		awk '{$1=$1};1' | tr -d '\r\n')
+	printf '%s' "$str" | xsel -i -b
+	printf '%s' "$str" | xclip
+	printf '%s' "$str" | xclip -sel clip
 	echo " ^ Copied to clipboard"
 }
 
@@ -139,4 +186,5 @@ else
 	copy_output_to_clipboard
 fi
 
-set_status "$stat_done"
+set_status_icons "$stat_done"
+set_status_ui_rdy
