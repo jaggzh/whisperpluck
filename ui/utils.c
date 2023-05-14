@@ -13,14 +13,14 @@ char *locate_script(const char *name) {
 	if (ourpath != NULL) {
 		// Try the current executable path
 		snprintf(fullpath, sizeof(fullpath), "%s/%s", ourpath, name);
-		fprintf(stderr, "Checking path: %s\n", fullpath);
+		/* fprintf(stderr, "Checking path: %s\n", fullpath); */
 		if (access(fullpath, X_OK) == 0) {
 			return strdup(fullpath);
 		}
 
 		// Try one directory up
 		snprintf(fullpath, sizeof(fullpath), "%s/../%s", ourpath, name);
-		fprintf(stderr, "Checking path: %s\n", fullpath);
+		/* fprintf(stderr, "Checking path: %s\n", fullpath); */
 		if (access(fullpath, X_OK) == 0) {
 			return strdup(fullpath);
 		}
