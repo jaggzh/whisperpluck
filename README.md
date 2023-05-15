@@ -15,9 +15,7 @@ Some scripts for convenient voice transcription. At present, we use OpenAI-Whisp
 
 ## See the [optional] new button UI in action
 
-[![Whisperpluck Whisper UI Buttons Video]
-(https://i.ytimg.com/vi/z5kiq3F-ros/maxresdefault.jpg)]
-(https://www.youtube.com/watch?v=z5kiq3F-ros "Whisperpluck Whisper UI Buttons Video")
+[![Whisperpluck Whisper UI Buttons Video](https://i.ytimg.com/vi/z5kiq3F-ros/maxresdefault.jpg)](https://www.youtube.com/watch?v=z5kiq3F-ros "Whisperpluck Whisper UI Buttons Video")
 
 ## Please consider contributing...
 
