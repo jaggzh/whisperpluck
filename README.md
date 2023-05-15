@@ -13,9 +13,9 @@ Some scripts for convenient voice transcription. At present, we use OpenAI-Whisp
 * Hotkeys: You can assign hotkeys to `whisper-auto` and `whisper-kill-rec`
 * Desktop Shortcuts: Drag the scripts to your desktop (preferably as .desktop entries -- I'm not sure what they'll do as links because whisper-auto tries to find its own location)
 
-## See the [optional] new button UI in action
+## Video of optional UI buttons
 
-Click to play video:
+Click to play video (remember, the button UI is optional. Hotkeys can be assigned to the scripts, or they can be used as icons on the desktop):
 [![Whisperpluck Whisper UI Buttons Video](https://i.ytimg.com/vi/z5kiq3F-ros/maxresdefault.jpg)](https://www.youtube.com/watch?v=z5kiq3F-ros "Whisperpluck Whisper UI Buttons Video")
 
 ## Please consider contributing...
