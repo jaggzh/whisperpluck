@@ -34,7 +34,7 @@ We have two methods of using whisper for our purposes:
 1. *No-Server Method:* Runs whisper each time you want a transcription (model must be loaded each run)
 2. *Server Method*: Run a separate little server (in `server-flask/`) which keeps the model loaded so transcriptions are faster
 
-## Both methods require a venv, which right now is `whisper`
+## Both methods require a venv, which right now is hard-coded as `whisper`
 
 (A venv is a python virtual environment, to store all the whisper-related stuff in this case.)
 
@@ -44,6 +44,9 @@ We have two methods of using whisper for our purposes:
 1. Activate venv: `. ~/venv/whisper/bin/activate`
 1. Install whisper stuff in venv:
     1. `pip install openai-whisper`
+    1. OR, you can use the versions I'm currently
+    using, which I placed in `requirements-whisper.txt` (to just use the scripts or UI), and `server-flask/requirements-server.txt` (to run the server, which needs openai-whisper AND flask).
+
     1. `pip install flask` <--- used only if you want to run our server
 
 ## Usage without server (will work right away.. least hassle to get started)
