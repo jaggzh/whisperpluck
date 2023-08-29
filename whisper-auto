@@ -87,10 +87,12 @@ set_status_ui_rdy () { _set_status_ui_sig -HUP; }
 
 record_audio () {
 	local rec_pid
+	local arecord_pid
 	cmd_record "$1" &
 	rec_pid=$!
-	echo "$rec_pid" > "$fn_rec_pid"
-	sleep .2
+	sleep .2 # give arecord some time to start
+	arecord_pid=$(pgrep -P $rec_pid)  # Find child PID of $rec_pid
+	echo "$arecord_pid" > "$fn_rec_pid"
 	echo
 	echo "	${bgree}-- RECORDING. Hit CTRL-C to Finish --$rste"
 
