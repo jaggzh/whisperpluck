@@ -87,22 +87,27 @@ set_status_ui_rdy () { _set_status_ui_sig -HUP; }
 
 record_audio () {
 	local rec_pid
+	local dur=0
+	if [[ $# -gt 1 ]]; then dur=$2; fi
 	cmd_record "$1" &
 	rec_pid=$!
+	echo "cmd_record's pid is: $rec_pid"
 	echo "$rec_pid" > "$fn_rec_pid"
 	sleep .2
 	echo
 	echo "	${bgree}-- RECORDING. Hit CTRL-C to Finish --$rste"
 
 	handle_sigint() {
-		# echo "Caught SIGINT; terminating recording."
+		echo "Caught SIGINT or SIGTERM; terminating recording."
 		kill -TERM "$rec_pid"
 	}
-	trap handle_sigint SIGINT  # Catch INT
+	trap handle_sigint SIGINT  # Catch signal
+	trap handle_sigint SIGTERM
 	wait "$rec_pid"
-	rm "$fn_rec_pid" # Clean up tmp pid file
+	#rm "$fn_rec_pid" # Clean up tmp pid file
 	echo "Continuing to process audio..."
 	trap - SIGINT              # reset the trap
+	trap - SIGTERM              # reset the trap
 }
 
 # Initital renaming

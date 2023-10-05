@@ -4,7 +4,7 @@ import whisper
 from tempfile import NamedTemporaryFile
 
 # Load the Whisper model:
-model = whisper.load_model('base')
+model = whisper.load_model('small')
 
 app = Flask(__name__)
 
