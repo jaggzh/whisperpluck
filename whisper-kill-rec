@@ -3,6 +3,7 @@
 #             found in whisper-auto
 fn_rec_pid=/tmp/whisper-auto-rec.pid
 echo "Attempting to kill $(<$fn_rec_pid)"
+kill -- "$(<$fn_rec_pid)"
 #kill -- -"$(<$fn_rec_pid)"
 #pkill -TERM -g "$(<$fn_rec_pid)"
 #pkill '^rec$'
