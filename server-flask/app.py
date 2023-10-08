@@ -4,7 +4,11 @@ import whisper
 from tempfile import NamedTemporaryFile
 
 # Load the Whisper model:
-model = whisper.load_model('small')
+# Examples from my whisper -h output:
+#  tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large
+#model = whisper.load_model('large-v2')
+#model = whisper.load_model('small')
+model = whisper.load_model('medium.en')
 
 app = Flask(__name__)
 

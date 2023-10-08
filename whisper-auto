@@ -19,7 +19,7 @@ server_port=5000
 	# whisper_model: Examples from my whisper -h output:
 	#  tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,
 	#    large-v1,large-v2,large
-	whisper_model=base
+	whisper_model=large-v2
 	#whisper_lang_opts=()
 	whisper_lang_opts=(--language en)  # This can be empty
 
