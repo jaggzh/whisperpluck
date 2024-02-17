@@ -3,8 +3,17 @@ from flask import Flask, abort, request
 import whisper
 from tempfile import NamedTemporaryFile
 
+# Configuration variables
+HOST = '0.0.0.0'  # Listen on all network interfaces
+PORT = 5000       # Default Flask port
+DEBUG = False     # Flask debug mode
+
 # Load the Whisper model:
-model = whisper.load_model('base')
+# Examples from my whisper -h output:
+#  tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large
+#model = whisper.load_model('large-v2')
+#model = whisper.load_model('small')
+model = whisper.load_model('medium.en')
 
 app = Flask(__name__)
 
@@ -21,10 +30,8 @@ def handler():
     # Loop over every file that the user submitted.
     for filename, handle in request.files.items():
         # Create a temporary file.
-        # The location of the temporary file is available in `temp.name`.
         temp = NamedTemporaryFile()
         # Write the user's uploaded file to the temporary file.
-        # The file will get deleted when it drops out of scope.
         handle.save(temp)
         # Let's get the transcript of the temporary file.
         result = model.transcribe(temp.name)
@@ -37,7 +44,7 @@ def handler():
         strings.append(result['text'])
 
     # This will be automatically converted to JSON.
-    #return {'results': results}
     return '. '.join(strings)
 
-# set noet ts=4
+if __name__ == '__main__':
+    app.run(host=HOST, port=PORT, debug=DEBUG)

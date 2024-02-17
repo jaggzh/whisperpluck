@@ -19,7 +19,7 @@ server_port=5000
 	# whisper_model: Examples from my whisper -h output:
 	#  tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,
 	#    large-v1,large-v2,large
-	whisper_model=base
+	whisper_model=large-v2
 	#whisper_lang_opts=()
 	whisper_lang_opts=(--language en)  # This can be empty
 
@@ -39,17 +39,6 @@ server_port=5000
 ################################################################
 # Now we're back at things that affect us regardless of server
 # mode or not...
-
-# You can pick a different record command for your system.
-# Note: Whisper will convert anything you give it to
-#   its needed   16000 Hz, s16le, mono
-
-cmd_record () { arecord -f S16_LE -r 16000 "$1"; }
-
-# sox's 'rec' has a strange delay on my system
-# This would need to be updated to match the arecord method above
-# record_command () { rec "$1"; }
-
 
 ################################################################
 ################################################################
@@ -85,26 +74,49 @@ set_status_ui_rec () { _set_status_ui_sig -USR1; }
 set_status_ui_whi () { _set_status_ui_sig -USR2; }
 set_status_ui_rdy () { _set_status_ui_sig -HUP; }
 
+
+# You can pick a different record command for your system.
+# Note: Whisper will convert anything you give it to
+#   its needed   16000 Hz, s16le, mono
+# sox's 'rec' has a strange delay on my system
+# This would need to be updated to match the arecord method above
+# record_command () { rec "$1"; }
+
+#cmd_record () { arecord -f S16_LE -r 16000 "$1"; }
+# We're using an alias now because the subshell from the fn() method was
+# screwing up our grabbing the bg pid (it was taking our whisper-auto's pid)
+# If you need a command that has the filename other than at the end (as the
+# alias requires), then you'll have to put the command directly in record_audio()
+# instead of using the alias
+alias cmd_record="arecord -f S16_LE -r 16000"
+
 record_audio () {
 	local rec_pid
-	local arecord_pid
-	cmd_record "$1" &
+	local dur=0
+	if [[ $# -gt 1 ]]; then dur=$2; fi
+
+	###############################
+	######## RECORDING PROGRAM HERE
+	arecord -f S16_LE -r 16000 "$1" &
 	rec_pid=$!
-	sleep .2 # give arecord some time to start
-	arecord_pid=$(pgrep -P $rec_pid)  # Find child PID of $rec_pid
-	echo "$arecord_pid" > "$fn_rec_pid"
+	###############################
+	echo "cmd_record's pid is: $rec_pid"
+	echo "$rec_pid" > "$fn_rec_pid"
+	sleep .2
 	echo
 	echo "	${bgree}-- RECORDING. Hit CTRL-C to Finish --$rste"
 
 	handle_sigint() {
-		# echo "Caught SIGINT; terminating recording."
+		echo "Caught SIGINT or SIGTERM; terminating recording."
 		kill -TERM "$rec_pid"
 	}
-	trap handle_sigint SIGINT  # Catch INT
+	trap handle_sigint SIGINT  # Catch signal
+	trap handle_sigint SIGTERM
 	wait "$rec_pid"
-	rm "$fn_rec_pid" # Clean up tmp pid file
+	#rm "$fn_rec_pid" # Clean up tmp pid file
 	echo "Continuing to process audio..."
 	trap - SIGINT              # reset the trap
+	trap - SIGTERM              # reset the trap
 }
 
 # Initital renaming
